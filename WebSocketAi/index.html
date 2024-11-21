@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket AI Client</title>
+</head>
+<body>
+    <h1>AI Prediction System</h1>
+    
+    <!-- Dropdown to select model -->
+    <label for="path">Choose Model:</label>
+    <select id="path">
+        <option value="/regression">Regression</option>
+        <option value="/classification">Classification</option>
+    </select>
+    <br><br>
+
+    <!-- Input field for data -->
+    <label for="inputData">Enter Data (comma-separated values between 0 and 1):</label>
+    <input type="text" id="inputData" placeholder="e.g., 0.1,0.2,0.3">
+    <br><br>
+    
+    <!-- Button to send data -->
+    <button onclick="sendMessage()">Send</button>
+
+    <!-- Area to display response -->
+    <p id="response"></p>
+
+    <script>
+        let ws;
+
+        // Connect WebSocket based on the selected model path
+        function connectWebSocket(path) {
+            if (ws) {
+                ws.close();  // Close previous WebSocket connection if any
+            }
+
+            // Open a new WebSocket connection based on the selected path (model type)
+            ws = new WebSocket(`ws://localhost:8765${path}`);
+
+            // Handle messages from the server
+            ws.onmessage = (event) => {
+                document.getElementById("response").innerText = "Response: " + event.data;
+            };
+
+            // Handle WebSocket errors
+            ws.onerror = () => {
+                document.getElementById("response").innerText = "Error connecting to WebSocket.";
+            };
+
+            // Handle WebSocket open connection event
+            ws.onopen = () => {
+                console.log(`Connected to WebSocket server at ${ws.url}`);
+            };
+        }
+
+        // Send input data to the WebSocket server
+        function sendMessage() {
+            const path = document.getElementById("path").value;  // Get selected model path (regression/classification)
+            const inputData = document.getElementById("inputData").value.trim();  // Get input data from user
+
+            // Validate input (must be a comma-separated list of numeric values between 0 and 1)
+            const dataArray = inputData.split(',').map(num => parseFloat(num.trim()));
+            const isValid = dataArray.every(num => !isNaN(num) && num >= 0 && num <= 1);
+            
+            if (!isValid) {
+                document.getElementById("response").innerText = "Invalid input. Please enter numeric values between 0 and 1.";
+                return;
+            }
+
+            // Connect to the WebSocket server based on the selected model
+            connectWebSocket(path);
+
+            // Send the data to the server once WebSocket is open
+            ws.onopen = () => {
+                ws.send(dataArray.join(','));  // Send the data as a comma-separated string
+            };
+        }
+    </script>
+</body>
+</html>
